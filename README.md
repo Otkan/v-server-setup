@@ -1,62 +1,87 @@
 # V-Server Setup Documentation
 
-## Overview
+This repository documents the setup and configuration of a Linux-based V-Server, including SSH access, web server installation, and Git integration.
 
-This repository documents the setup and configuration of a Linux-based V-Server, including SSH access, web server installation, domain configuration, HTTPS setup, and Git integration.
+---
+
+## Table of Contents
+
+* [1. SSH Key Setup](#1-ssh-key-setup)
+* [2. Disable Password Authentication](#2-disable-password-authentication)
+* [3. Install NGINX](#3-install-nginx)
+* [4. Custom NGINX Configuration](#4-custom-nginx-configuration)
+* [5. Remove Default NGINX Page](#5-remove-default-nginx-page)
+* [6. Validate and Reload NGINX](#6-validate-and-reload-nginx)
+* [7. Git Installation and Configuration](#7-git-installation-and-configuration)
+* [8. GitHub SSH Integration](#8-github-ssh-integration-server-side)
+* [9. Clone Repository](#9-clone-repository-on-server)
+* [10. Final Verification](#10-final-verification)
 
 ---
 
 ## 1. SSH Key Setup
 
-An SSH key was added to enable secure login to the server without using a password.
+An SSH key is used to enable secure login to the server without using a password.
 
 ### Steps
 
-* Generated an SSH key pair on the local machine:
+Generate an SSH key pair on the local machine:
 
-  ```bash
-  ssh-keygen -t ed25519
-  ```
-* Copied the public key to the server:
+```bash
+ssh-keygen -t ed25519
+```
 
-  ```bash
-  ssh-copy-id user@server-ip
-  ```
-* Verified SSH login:
+Copy the public key to the server:
 
-  ```bash
-  ssh user@server-ip
-  ```
+```bash
+ssh-copy-id <user>@<server-ip>
+```
+
+⚠️ If multiple SSH keys exist, specify the correct one:
+
+```bash
+ssh-copy-id -i ~/.ssh/id_ed25519.pub <user>@<server-ip>
+```
+
+Verify SSH login:
+
+```bash
+ssh <user>@<server-ip>
+```
 
 ---
 
 ## 2. Disable Password Authentication
 
-After confirming that SSH login via key works, password authentication was disabled.
+After confirming that SSH login via key works, password authentication is disabled.
 
 ### Steps
 
-* Opened the SSH configuration:
+Open the SSH configuration:
 
-  ```bash
-  sudo nano /etc/ssh/sshd_config
-  ```
-* Changed the following setting from #PasswordAuthentication no to:
+```bash
+sudo nano /etc/ssh/sshd_config
+```
 
-  ```
-  PasswordAuthentication no
-  ```
-* Restarted the SSH service:
+Ensure the following line is set correctly:
 
-  ```bash
-  sudo systemctl restart ssh
-  ```
+```text
+PasswordAuthentication no
+```
+
+⚠️ If the line is commented (`#PasswordAuthentication no`), remove the `#`.
+
+Restart the SSH service:
+
+```bash
+sudo systemctl restart ssh
+```
 
 ---
 
 ## 3. Install NGINX
 
-NGINX was installed as the web server.
+NGINX is installed as the web server.
 
 ### Installation
 
@@ -67,14 +92,14 @@ sudo apt install nginx -y
 
 ### Verification
 
-* Entered the server IP address in the browser
-* Confirmed that the default NGINX welcome page was shown
+* Open `<server-ip>:8081` in the browser
+* Confirm that the NGINX page is displayed
 
 ---
 
 ## 4. Custom NGINX Configuration
 
-Instead of modifying the default page, a separate directory and custom NGINX configuration were created.
+A custom HTML page is configured as the entry point.
 
 ### Create web directory
 
@@ -88,7 +113,7 @@ sudo mkdir -p /var/www/alternatives
 sudo nano /var/www/alternatives/alternate-index.html
 ```
 
-### Create custom NGINX site configuration
+### Create NGINX configuration
 
 ```bash
 sudo nano /etc/nginx/sites-enabled/alternatives
@@ -98,10 +123,10 @@ sudo nano /etc/nginx/sites-enabled/alternatives
 
 ```nginx
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
+    listen 8081;
+    listen [::]:8081;
 
-    server_name deine-domain.de www.deine-domain.de;
+    server_name <server-ip>;
 
     root /var/www/alternatives;
     index alternate-index.html;
@@ -116,7 +141,7 @@ server {
 
 ## 5. Remove Default NGINX Page
 
-The default configuration was removed to prevent the standard NGINX page from being served.
+Remove the default configuration:
 
 ```bash
 sudo rm /etc/nginx/sites-enabled/default
@@ -133,97 +158,32 @@ sudo systemctl reload nginx
 
 ---
 
-## 7. Domain Configuration
+## 7. Git Installation and Configuration
 
-A domain was configured to point to the server using DNS.
-
-### Steps
-
-* Opened the domain settings in the hosting provider (e.g. STRATO)
-* Created an A record:
-
-```
-Type: A
-Name: @
-Value: <your-server-ip>
-```
-
-Optional:
-
-```
-Type: A
-Name: www
-Value: <your-server-ip>
-```
-
-### Verification
-
-```bash
-ping deine-domain.de
-```
-
-The domain should resolve to the server IP address.
-
----
-
-## 8. Install Certbot
-
-Certbot was installed to enable HTTPS using Let's Encrypt.
-
-```bash
-sudo apt update
-sudo apt install certbot python3-certbot-nginx -y
-```
-
----
-
-## 9. Enable HTTPS with Certbot
-
-Certbot was used to automatically generate and configure SSL certificates.
-
-```bash
-sudo certbot --nginx
-```
-
-### During setup
-
-* Entered email address
-* Accepted terms
-* Selected the domain
-* Enabled automatic HTTP → HTTPS redirect
-
----
-
-## 10. Git Installation and Configuration
-
-Git was installed
+Install and configure Git:
 
 ```bash
 sudo apt update
 sudo apt install git -y
 ```
 
-Git was configured with user credentials.
-
 ```bash
-git config --global user.name "Your Name"
-git config --global user.email "your@email.com"
+git config --global user.name "<your-name>"
+git config --global user.email "<your-email>"
 ```
 
 ---
 
-## 11. GitHub SSH Integration (Server Side)
+## 8. GitHub SSH Integration (Server Side)
 
-An SSH key was generated on the server to allow interaction with GitHub repositories.
-
-### Steps
+Generate an SSH key on the server:
 
 ```bash
 ssh-keygen -t ed25519 -C "server-github"
 cat ~/.ssh/id_ed25519.pub
 ```
 
-The public key was added to GitHub.
+Add the public key to GitHub.
 
 ### Test connection
 
@@ -231,32 +191,22 @@ The public key was added to GitHub.
 ssh -T git@github.com
 ```
 
-Expected output:
-
-```
-Hi USERNAME! You've successfully authenticated, but GitHub does not provide shell access.
-```
-
 ---
 
-## 12. Clone Repository on Server
-
-The Git repository was cloned to the server using SSH authentication.
+## 9. Clone Repository on Server
 
 ```bash
-git clone git@github.com:USERNAME/REPOSITORY.git
+git clone git@github.com:<username>/<repository>.git
 ```
 
 ---
 
-## 13. Final Verification
+## 10. Final Verification
 
-* Server is reachable via domain
-* HTTPS is active (valid SSL certificate)
-* HTTP is redirected to HTTPS
-* Custom NGINX page is displayed
-* Default NGINX page is removed
-* SSH login works with key authentication only
+* SSH login works with key authentication
+* Password login is disabled
+* Web server is reachable via `<server-ip>:8081`
+* Custom HTML page is displayed
 * GitHub access via SSH works
 
 ---
@@ -264,21 +214,19 @@ git clone git@github.com:USERNAME/REPOSITORY.git
 ## Notes
 
 * No sensitive data (passwords, private keys) is stored in this repository
-* Configuration is reproducible and documented step by step
+* The setup is reproducible and documented step by step
 
 ---
 
 ## Server Information
 
-* Server IP: `<your-server-ip>`
-* Domain: `<your-domain>`
+* Server IP: `<server-ip>`
 * OS: Linux (e.g. Ubuntu)
 * Web Server: NGINX
-* SSL: Let's Encrypt (Certbot)
 * Version Control: Git + GitHub
 
 ---
 
 ## Conclusion
 
-The V-Server has been successfully configured with secure SSH access, a custom NGINX setup, domain integration, HTTPS encryption, and GitHub integration. The setup follows best practices for security and maintainability.
+The V-Server is configured with secure SSH access, a custom NGINX setup, and GitHub integration. The setup follows best practices for security and maintainability.
